@@ -1,0 +1,1493 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aura - Plataforma de Inteligencia Médica Proactiva</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .sidebar-transition {
+            transition: all 0.3s ease-in-out;
+        }
+        .content-transition {
+            transition: all 0.3s ease-in-out;
+        }
+        .card-hover {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        .timeline-line {
+            background: linear-gradient(to bottom, #3b82f6, #e5e7eb);
+        }
+        .pulse-dot {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Search Modal -->
+    <div id="searchModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl">
+                <div class="p-6 border-b border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-semibold text-gray-900">Búsqueda Avanzada</h3>
+                        <button onclick="closeSearchModal()" class="text-gray-400 hover:text-gray-600">
+                            <span class="text-xl">✕</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Buscar en:</label>
+                            <div class="flex flex-wrap gap-2">
+                                <label class="flex items-center">
+                                    <input type="checkbox" id="searchPatients" checked class="mr-2">
+                                    <span class="text-sm">Pacientes</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" id="searchAlerts" checked class="mr-2">
+                                    <span class="text-sm">Alertas</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" id="searchTasks" checked class="mr-2">
+                                    <span class="text-sm">Tareas</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" id="searchTimeline" checked class="mr-2">
+                                    <span class="text-sm">Timeline</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Término de búsqueda:</label>
+                            <input type="text" id="searchInput" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ingrese término de búsqueda...">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Filtros de fecha:</label>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs text-gray-500 mb-1">Desde:</label>
+                                    <input type="date" id="dateFrom" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-500 mb-1">Hasta:</label>
+                                    <input type="date" id="dateTo" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-6 flex justify-end space-x-3">
+                        <button onclick="closeSearchModal()" class="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50">
+                            Cancelar
+                        </button>
+                        <button onclick="performSearch()" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600">
+                            Buscar
+                        </button>
+                    </div>
+                </div>
+                <div id="searchResults" class="hidden border-t border-gray-200 p-6 max-h-64 overflow-y-auto">
+                    <h4 class="font-medium text-gray-900 mb-3">Resultados de búsqueda:</h4>
+                    <div id="searchResultsList" class="space-y-2"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-md">
+                <div class="p-6 border-b border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-semibold text-gray-900">Configuraciones</h3>
+                        <button onclick="closeSettingsModal()" class="text-gray-400 hover:text-gray-600">
+                            <span class="text-xl">✕</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Tema:</label>
+                        <select id="themeSelector" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                            <option value="light">Claro</option>
+                            <option value="dark">Oscuro</option>
+                            <option value="auto">Automático</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Frecuencia de actualización:</label>
+                        <select id="refreshRate" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                            <option value="10">10 segundos</option>
+                            <option value="30" selected>30 segundos</option>
+                            <option value="60">1 minuto</option>
+                            <option value="300">5 minutos</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="flex items-center">
+                            <input type="checkbox" id="enableNotifications" checked class="mr-2">
+                            <span class="text-sm">Habilitar notificaciones</span>
+                        </label>
+                    </div>
+                    <div>
+                        <label class="flex items-center">
+                            <input type="checkbox" id="enableSounds" class="mr-2">
+                            <span class="text-sm">Sonidos de alerta</span>
+                        </label>
+                    </div>
+                    <div>
+                        <label class="flex items-center">
+                            <input type="checkbox" id="autoSave" checked class="mr-2">
+                            <span class="text-sm">Guardado automático</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="p-6 border-t border-gray-200 flex justify-end space-x-3">
+                    <button onclick="closeSettingsModal()" class="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50">
+                        Cancelar
+                    </button>
+                    <button onclick="saveSettings()" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600">
+                        Guardar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Modal -->
+    <div id="exportModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-md">
+                <div class="p-6 border-b border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-semibold text-gray-900">Exportar Reporte</h3>
+                        <button onclick="closeExportModal()" class="text-gray-400 hover:text-gray-600">
+                            <span class="text-xl">✕</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de reporte:</label>
+                        <select id="reportType" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                            <option value="complete">Reporte completo</option>
+                            <option value="vitals">Solo signos vitales</option>
+                            <option value="alerts">Solo alertas</option>
+                            <option value="timeline">Timeline del paciente</option>
+                            <option value="tasks">Tareas clínicas</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Formato:</label>
+                        <select id="exportFormat" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                            <option value="pdf">PDF</option>
+                            <option value="json">JSON</option>
+                            <option value="csv">CSV</option>
+                            <option value="xlsx">Excel</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Rango de fechas:</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="date" id="exportDateFrom" class="px-3 py-2 border border-gray-300 rounded-md text-sm">
+                            <input type="date" id="exportDateTo" class="px-3 py-2 border border-gray-300 rounded-md text-sm">
+                        </div>
+                    </div>
+                </div>
+                <div class="p-6 border-t border-gray-200 flex justify-end space-x-3">
+                    <button onclick="closeExportModal()" class="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50">
+                        Cancelar
+                    </button>
+                    <button onclick="exportReport()" class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600">
+                        Exportar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Sidebar -->
+    <div id="sidebar" class="fixed left-0 top-0 h-full w-64 bg-white shadow-lg sidebar-transition z-50">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                        <span class="text-white font-bold text-lg">A</span>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-gray-800">Aura</h1>
+                        <p class="text-xs text-gray-500">Inteligencia Médica</p>
+                    </div>
+                </div>
+                <div class="flex space-x-1">
+                    <button onclick="openSearchModal()" class="p-1 text-gray-500 hover:text-blue-600 transition-colors" title="Búsqueda avanzada">
+                        <span class="text-lg">🔍</span>
+                    </button>
+                    <button onclick="openSettingsModal()" class="p-1 text-gray-500 hover:text-blue-600 transition-colors" title="Configuraciones">
+                        <span class="text-lg">⚙️</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <nav class="mt-6">
+            <div class="px-4 space-y-2">
+                <button onclick="showSection('dashboard')" class="nav-item w-full flex items-center space-x-3 px-4 py-3 text-left rounded-lg hover:bg-blue-50 transition-colors active" data-section="dashboard">
+                    <span class="text-xl">📊</span>
+                    <span class="font-medium">Dashboard</span>
+                </button>
+                <button onclick="showSection('timeline')" class="nav-item w-full flex items-center space-x-3 px-4 py-3 text-left rounded-lg hover:bg-blue-50 transition-colors" data-section="timeline">
+                    <span class="text-xl">⏰</span>
+                    <span class="font-medium">Línea de Tiempo</span>
+                </button>
+                <button onclick="showSection('datasources')" class="nav-item w-full flex items-center space-x-3 px-4 py-3 text-left rounded-lg hover:bg-blue-50 transition-colors" data-section="datasources">
+                    <span class="text-xl">🔗</span>
+                    <span class="font-medium">Fuentes de Datos</span>
+                </button>
+                <button onclick="showSection('tasks')" class="nav-item w-full flex items-center space-x-3 px-4 py-3 text-left rounded-lg hover:bg-blue-50 transition-colors" data-section="tasks">
+                    <span class="text-xl">✅</span>
+                    <span class="font-medium">Tareas Clínicas</span>
+                </button>
+                <button onclick="showSection('alerts')" class="nav-item w-full flex items-center space-x-3 px-4 py-3 text-left rounded-lg hover:bg-blue-50 transition-colors" data-section="alerts">
+                    <span class="text-xl">⚠️</span>
+                    <span class="font-medium">Alertas Proactivas</span>
+                </button>
+            </div>
+        </nav>
+
+        <!-- User Info -->
+        <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
+            <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                    <span class="text-sm font-medium">👨‍⚕️</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-900 truncate">Dr. García</p>
+                    <p class="text-xs text-gray-500 truncate">Cardiólogo</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="ml-64 content-transition">
+        <!-- Header -->
+        <header class="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 id="sectionTitle" class="text-2xl font-bold text-gray-900">Dashboard Principal</h2>
+                    <p id="sectionSubtitle" class="text-sm text-gray-600 mt-1">Resumen integral del paciente</p>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button onclick="openExportModal()" class="px-3 py-2 bg-green-500 text-white text-sm rounded-lg hover:bg-green-600 transition-colors flex items-center space-x-2">
+                        <span>📊</span>
+                        <span>Exportar</span>
+                    </button>
+                    <div class="text-right">
+                        <p class="text-sm font-medium text-gray-900">Paciente Actual</p>
+                        <p class="text-xs text-gray-500">María González - ID: 12345</p>
+                    </div>
+                    <div class="w-2 h-2 bg-green-500 rounded-full pulse-dot"></div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Section -->
+        <div id="dashboard-section" class="section-content p-6">
+            <!-- Patient Identity Card -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-16 h-16 bg-gradient-to-r from-pink-400 to-purple-500 rounded-full flex items-center justify-center">
+                            <span class="text-white text-2xl font-bold">MG</span>
+                        </div>
+                        <div>
+                            <h3 class="text-2xl font-bold text-gray-900">María González</h3>
+                            <p class="text-gray-600">45 años • ID: MPI-12345</p>
+                            <p class="text-sm text-gray-500">Última actualización: Hace 5 minutos</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                            <div class="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                            Estable
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Digital Vital Signs -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Frecuencia Cardíaca</p>
+                            <p class="text-2xl font-bold text-gray-900">72 bpm</p>
+                            <p class="text-xs text-gray-500">Oura Ring • Hace 2h</p>
+                        </div>
+                        <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                            <span class="text-red-600 text-xl">❤️</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Nivel de Actividad</p>
+                            <p class="text-2xl font-bold text-gray-900">8,450</p>
+                            <p class="text-xs text-gray-500">HealthKit • Hoy</p>
+                        </div>
+                        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <span class="text-blue-600 text-xl">🚶</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Glucosa</p>
+                            <p class="text-2xl font-bold text-gray-900">95 mg/dL</p>
+                            <p class="text-xs text-gray-500">Monitor CGM • Hace 15min</p>
+                        </div>
+                        <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                            <span class="text-yellow-600 text-xl">🩸</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Próxima Cita</p>
+                            <p class="text-2xl font-bold text-gray-900">3 días</p>
+                            <p class="text-xs text-gray-500">EHR • Cardiología</p>
+                        </div>
+                        <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                            <span class="text-green-600 text-xl">📅</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Correlation Chart -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="text-lg font-semibold text-gray-900">Correlación de Métricas</h4>
+                        <select id="metricSelector" class="text-sm border border-gray-300 rounded-md px-3 py-1">
+                            <option value="sleep-glucose">Sueño vs Glucosa</option>
+                            <option value="activity-bp">Actividad vs Presión</option>
+                            <option value="stress-hr">Estrés vs Frecuencia Cardíaca</option>
+                        </select>
+                    </div>
+                    <canvas id="correlationChart" width="400" height="200"></canvas>
+                </div>
+
+                <!-- Proactive Alerts -->
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h4 class="text-lg font-semibold text-gray-900 mb-4">Alertas Proactivas</h4>
+                    <div class="space-y-4">
+                        <div class="flex items-start space-x-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                            <span class="text-yellow-600 text-lg">⚠️</span>
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-gray-900">Disminución en Actividad Física</p>
+                                <p class="text-xs text-gray-600 mt-1">30% menos actividad esta semana. Correlacionado con aumento en presión arterial.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start space-x-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                            <span class="text-blue-600 text-lg">💡</span>
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-gray-900">Patrón de Sueño Irregular</p>
+                                <p class="text-xs text-gray-600 mt-1">Variabilidad del 40% en horarios de sueño. Considerar evaluación del sueño.</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start space-x-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                            <span class="text-green-600 text-lg">✅</span>
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-gray-900">Adherencia a Medicación</p>
+                                <p class="text-xs text-gray-600 mt-1">Excelente adherencia del 95% en las últimas 2 semanas.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Timeline Section -->
+        <div id="timeline-section" class="section-content p-6 hidden">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h4 class="text-lg font-semibold text-gray-900 mb-6">Línea de Tiempo del Paciente</h4>
+                <div class="relative">
+                    <div class="absolute left-8 top-0 bottom-0 w-0.5 timeline-line"></div>
+                    
+                    <!-- Timeline Events -->
+                    <div class="space-y-6">
+                        <div class="relative flex items-start space-x-4">
+                            <div class="relative z-10 w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow"></div>
+                            <div class="flex-1 bg-blue-50 rounded-lg p-4 border border-blue-200">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h5 class="font-medium text-gray-900">🏥 Consulta Cardiológica</h5>
+                                    <span class="text-xs text-gray-500">Hace 2 días</span>
+                                </div>
+                                <p class="text-sm text-gray-600">Evaluación rutinaria. Presión arterial estable. Continuar con medicación actual.</p>
+                                <div class="mt-2 text-xs text-blue-600">EHR - Hospital Central</div>
+                            </div>
+                        </div>
+
+                        <div class="relative flex items-start space-x-4">
+                            <div class="relative z-10 w-4 h-4 bg-purple-500 rounded-full border-2 border-white shadow"></div>
+                            <div class="flex-1 bg-purple-50 rounded-lg p-4 border border-purple-200">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h5 class="font-medium text-gray-900">💍 Resumen de Sueño</h5>
+                                    <span class="text-xs text-gray-500">Anoche</span>
+                                </div>
+                                <p class="text-sm text-gray-600">7h 23min de sueño. Calidad: Buena. REM: 1h 45min.</p>
+                                <div class="mt-2 text-xs text-purple-600">Oura Ring</div>
+                            </div>
+                        </div>
+
+                        <div class="relative flex items-start space-x-4">
+                            <div class="relative z-10 w-4 h-4 bg-green-500 rounded-full border-2 border-white shadow"></div>
+                            <div class="flex-1 bg-green-50 rounded-lg p-4 border border-green-200">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h5 class="font-medium text-gray-900">💊 Medicación Tomada</h5>
+                                    <span class="text-xs text-gray-500">Hace 3 horas</span>
+                                </div>
+                                <p class="text-sm text-gray-600">Lisinopril 10mg - Confirmado por sensor inteligente</p>
+                                <div class="mt-2 text-xs text-green-600">Sistema de Adherencia</div>
+                            </div>
+                        </div>
+
+                        <div class="relative flex items-start space-x-4">
+                            <div class="relative z-10 w-4 h-4 bg-red-500 rounded-full border-2 border-white shadow"></div>
+                            <div class="flex-1 bg-red-50 rounded-lg p-4 border border-red-200">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h5 class="font-medium text-gray-900">🩸 Resultados de Laboratorio</h5>
+                                    <span class="text-xs text-gray-500">Hace 1 semana</span>
+                                </div>
+                                <p class="text-sm text-gray-600">Colesterol total: 180 mg/dL. HDL: 55 mg/dL. LDL: 110 mg/dL.</p>
+                                <div class="mt-2 text-xs text-red-600">Laboratorio Central</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Sources Section -->
+        <div id="datasources-section" class="section-content p-6 hidden">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 card-hover">
+                    <div class="flex items-center justify-between mb-4">
+                        <h5 class="font-medium text-gray-900">EHR Clínica Central</h5>
+                        <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-3">Sistema de historiales médicos electrónicos</p>
+                    <div class="text-xs text-gray-500">
+                        <p>Última sincronización: Hace 5 minutos</p>
+                        <p>Estado: Conectado</p>
+                        <p>Registros: 1,247</p>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 card-hover">
+                    <div class="flex items-center justify-between mb-4">
+                        <h5 class="font-medium text-gray-900">Oura Ring</h5>
+                        <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-3">Dispositivo de monitoreo de sueño y actividad</p>
+                    <div class="text-xs text-gray-500">
+                        <p>Última sincronización: Hace 2 horas</p>
+                        <p>Estado: Conectado</p>
+                        <p>Datos: Sueño, FC, Actividad</p>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 card-hover">
+                    <div class="flex items-center justify-between mb-4">
+                        <h5 class="font-medium text-gray-900">Apple HealthKit</h5>
+                        <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-3">Plataforma de datos de salud de iOS</p>
+                    <div class="text-xs text-gray-500">
+                        <p>Última sincronización: Hace 1 hora</p>
+                        <p>Estado: Conectado</p>
+                        <p>Datos: Pasos, Peso, Presión</p>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 card-hover">
+                    <div class="flex items-center justify-between mb-4">
+                        <h5 class="font-medium text-gray-900">Monitor CGM</h5>
+                        <div class="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-3">Monitor continuo de glucosa</p>
+                    <div class="text-xs text-gray-500">
+                        <p>Última sincronización: Hace 15 minutos</p>
+                        <p>Estado: Sincronizando</p>
+                        <p>Datos: Glucosa en tiempo real</p>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 card-hover">
+                    <div class="flex items-center justify-between mb-4">
+                        <h5 class="font-medium text-gray-900">Laboratorio Central</h5>
+                        <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-3">API de resultados de laboratorio</p>
+                    <div class="text-xs text-gray-500">
+                        <p>Última sincronización: Hace 6 horas</p>
+                        <p>Estado: Conectado</p>
+                        <p>Datos: Análisis de sangre</p>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 card-hover">
+                    <div class="flex items-center justify-between mb-4">
+                        <h5 class="font-medium text-gray-900">Sistema de Medicación</h5>
+                        <div class="w-3 h-3 bg-red-500 rounded-full"></div>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-3">Monitoreo de adherencia a medicamentos</p>
+                    <div class="text-xs text-gray-500">
+                        <p>Última sincronización: Error</p>
+                        <p>Estado: Desconectado</p>
+                        <p>Requiere reconfiguración</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Clinical Tasks Section -->
+        <div id="tasks-section" class="section-content p-6 hidden">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h4 class="text-lg font-semibold text-gray-900">Tareas Clínicas Pendientes</h4>
+                    <button class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                        Nueva Tarea
+                    </button>
+                </div>
+                
+                <div class="space-y-4">
+                    <div class="flex items-center space-x-4 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                        <input type="checkbox" class="w-5 h-5 text-blue-600 rounded">
+                        <div class="flex-1">
+                            <h5 class="font-medium text-gray-900">Revisar resultados de laboratorio</h5>
+                            <p class="text-sm text-gray-600">Analizar niveles de colesterol y ajustar medicación si es necesario</p>
+                            <div class="flex items-center space-x-4 mt-2 text-xs text-gray-500">
+                                <span>📅 Vence: Hoy</span>
+                                <span>⚡ Prioridad: Alta</span>
+                                <span>👤 Asignado: Dr. García</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center space-x-4 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                        <input type="checkbox" class="w-5 h-5 text-blue-600 rounded">
+                        <div class="flex-1">
+                            <h5 class="font-medium text-gray-900">Seguimiento de adherencia a medicación</h5>
+                            <p class="text-sm text-gray-600">Contactar al paciente sobre la falta de sincronización del sistema de medicación</p>
+                            <div class="flex items-center space-x-4 mt-2 text-xs text-gray-500">
+                                <span>📅 Vence: Mañana</span>
+                                <span>⚡ Prioridad: Media</span>
+                                <span>👤 Asignado: Enfermera López</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center space-x-4 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                        <input type="checkbox" class="w-5 h-5 text-blue-600 rounded" checked>
+                        <div class="flex-1 opacity-75">
+                            <h5 class="font-medium text-gray-900 line-through">Programar cita de seguimiento</h5>
+                            <p class="text-sm text-gray-600">Cita programada para evaluación cardiológica en 3 días</p>
+                            <div class="flex items-center space-x-4 mt-2 text-xs text-gray-500">
+                                <span>✅ Completada</span>
+                                <span>👤 Completada por: Dr. García</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center space-x-4 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                        <input type="checkbox" class="w-5 h-5 text-blue-600 rounded">
+                        <div class="flex-1">
+                            <h5 class="font-medium text-gray-900">Evaluar patrón de sueño irregular</h5>
+                            <p class="text-sm text-gray-600">Analizar datos del Oura Ring y considerar derivación a especialista en sueño</p>
+                            <div class="flex items-center space-x-4 mt-2 text-xs text-gray-500">
+                                <span>📅 Vence: Esta semana</span>
+                                <span>⚡ Prioridad: Baja</span>
+                                <span>👤 Asignado: Dr. García</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alerts Section -->
+        <div id="alerts-section" class="section-content p-6 hidden">
+            <div class="space-y-6">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h4 class="text-lg font-semibold text-gray-900 mb-4">Alertas Críticas</h4>
+                    <div class="space-y-4">
+                        <div class="flex items-start space-x-4 p-4 bg-red-50 rounded-lg border border-red-200">
+                            <span class="text-red-600 text-2xl">🚨</span>
+                            <div class="flex-1">
+                                <h5 class="font-medium text-gray-900">Frecuencia Cardíaca Elevada</h5>
+                                <p class="text-sm text-gray-600 mt-1">FC promedio de 95 bpm en las últimas 4 horas. 30% por encima del baseline del paciente.</p>
+                                <div class="flex items-center space-x-4 mt-3 text-xs text-gray-500">
+                                    <span>🕐 Detectado: Hace 15 minutos</span>
+                                    <span>📊 Fuente: Oura Ring</span>
+                                    <span>⚡ Severidad: Alta</span>
+                                </div>
+                                <div class="mt-3">
+                                    <button class="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition-colors mr-2">
+                                        Contactar Paciente
+                                    </button>
+                                    <button class="px-3 py-1 bg-gray-600 text-white text-xs rounded hover:bg-gray-700 transition-colors mr-2">
+                                        Marcar como Revisada
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h4 class="text-lg font-semibold text-gray-900 mb-4">Alertas de Seguimiento</h4>
+                    <div class="space-y-4">
+                        <div class="flex items-start space-x-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                            <span class="text-yellow-600 text-xl">⚠️</span>
+                            <div class="flex-1">
+                                <h5 class="font-medium text-gray-900">Disminución en Actividad Física</h5>
+                                <p class="text-sm text-gray-600 mt-1">30% menos actividad esta semana comparado con el promedio mensual.</p>
+                                <div class="flex items-center space-x-4 mt-3 text-xs text-gray-500">
+                                    <span>🕐 Detectado: Hace 2 horas</span>
+                                    <span>📊 Fuente: HealthKit</span>
+                                    <span>⚡ Severidad: Media</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start space-x-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                            <span class="text-blue-600 text-xl">💡</span>
+                            <div class="flex-1">
+                                <h5 class="font-medium text-gray-900">Patrón de Sueño Irregular</h5>
+                                <p class="text-sm text-gray-600 mt-1">Variabilidad del 40% en horarios de sueño en los últimos 7 días.</p>
+                                <div class="flex items-center space-x-4 mt-3 text-xs text-gray-500">
+                                    <span>🕐 Detectado: Ayer</span>
+                                    <span>📊 Fuente: Oura Ring</span>
+                                    <span>⚡ Severidad: Baja</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <h4 class="text-lg font-semibold text-gray-900 mb-4">Alertas Positivas</h4>
+                    <div class="space-y-4">
+                        <div class="flex items-start space-x-4 p-4 bg-green-50 rounded-lg border border-green-200">
+                            <span class="text-green-600 text-xl">✅</span>
+                            <div class="flex-1">
+                                <h5 class="font-medium text-gray-900">Excelente Adherencia a Medicación</h5>
+                                <p class="text-sm text-gray-600 mt-1">95% de adherencia en las últimas 2 semanas. Muy por encima del promedio.</p>
+                                <div class="flex items-center space-x-4 mt-3 text-xs text-gray-500">
+                                    <span>🕐 Actualizado: Hace 1 hora</span>
+                                    <span>📊 Fuente: Sistema de Medicación</span>
+                                    <span>⚡ Tipo: Positiva</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start space-x-4 p-4 bg-green-50 rounded-lg border border-green-200">
+                            <span class="text-green-600 text-xl">📈</span>
+                            <div class="flex-1">
+                                <h5 class="font-medium text-gray-900">Mejora en Calidad del Sueño</h5>
+                                <p class="text-sm text-gray-600 mt-1">Incremento del 25% en sueño profundo comparado con el mes anterior.</p>
+                                <div class="flex items-center space-x-4 mt-3 text-xs text-gray-500">
+                                    <span>🕐 Detectado: Esta mañana</span>
+                                    <span>📊 Fuente: Oura Ring</span>
+                                    <span>⚡ Tipo: Positiva</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        // Global variables
+        let correlationChart = null;
+        let refreshInterval = null;
+        let settings = {
+            theme: 'light',
+            refreshRate: 30,
+            enableNotifications: true,
+            enableSounds: false,
+            autoSave: true
+        };
+
+        // Local Storage Management
+        const LocalStorage = {
+            save: function(key, data) {
+                try {
+                    localStorage.setItem(`aura_${key}`, JSON.stringify(data));
+                    console.log(`Data saved to localStorage: ${key}`);
+                } catch (error) {
+                    console.error('Error saving to localStorage:', error);
+                }
+            },
+            
+            load: function(key) {
+                try {
+                    const data = localStorage.getItem(`aura_${key}`);
+                    return data ? JSON.parse(data) : null;
+                } catch (error) {
+                    console.error('Error loading from localStorage:', error);
+                    return null;
+                }
+            },
+            
+            remove: function(key) {
+                try {
+                    localStorage.removeItem(`aura_${key}`);
+                    console.log(`Data removed from localStorage: ${key}`);
+                } catch (error) {
+                    console.error('Error removing from localStorage:', error);
+                }
+            }
+        };
+
+        // Search functionality
+        const searchData = {
+            patients: [
+                { id: 'MPI-12345', name: 'María González', age: 45, status: 'Estable' },
+                { id: 'MPI-12346', name: 'Juan Pérez', age: 52, status: 'Requiere Revisión' },
+                { id: 'MPI-12347', name: 'Ana Martínez', age: 38, status: 'Estable' }
+            ],
+            alerts: [
+                { type: 'Crítica', title: 'Frecuencia Cardíaca Elevada', patient: 'María González', date: '2024-01-15' },
+                { type: 'Media', title: 'Disminución en Actividad Física', patient: 'María González', date: '2024-01-14' },
+                { type: 'Baja', title: 'Patrón de Sueño Irregular', patient: 'María González', date: '2024-01-13' }
+            ],
+            tasks: [
+                { title: 'Revisar resultados de laboratorio', priority: 'Alta', assignee: 'Dr. García', due: '2024-01-15' },
+                { title: 'Seguimiento de adherencia a medicación', priority: 'Media', assignee: 'Enfermera López', due: '2024-01-16' },
+                { title: 'Evaluar patrón de sueño irregular', priority: 'Baja', assignee: 'Dr. García', due: '2024-01-20' }
+            ],
+            timeline: [
+                { type: 'Consulta', title: 'Consulta Cardiológica', date: '2024-01-13', source: 'EHR' },
+                { type: 'Sueño', title: 'Resumen de Sueño', date: '2024-01-14', source: 'Oura Ring' },
+                { type: 'Medicación', title: 'Medicación Tomada', date: '2024-01-15', source: 'Sistema de Adherencia' }
+            ]
+        };
+
+        // Modal functions
+        function openSearchModal() {
+            document.getElementById('searchModal').classList.remove('hidden');
+            document.getElementById('searchInput').focus();
+        }
+
+        function closeSearchModal() {
+            document.getElementById('searchModal').classList.add('hidden');
+            document.getElementById('searchResults').classList.add('hidden');
+        }
+
+        function openSettingsModal() {
+            document.getElementById('settingsModal').classList.remove('hidden');
+            loadSettings();
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settingsModal').classList.add('hidden');
+        }
+
+        function openExportModal() {
+            document.getElementById('exportModal').classList.remove('hidden');
+            // Set default dates
+            const today = new Date().toISOString().split('T')[0];
+            const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            document.getElementById('exportDateFrom').value = weekAgo;
+            document.getElementById('exportDateTo').value = today;
+        }
+
+        function closeExportModal() {
+            document.getElementById('exportModal').classList.add('hidden');
+        }
+
+        // Search functionality
+        function performSearch() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+            const searchPatients = document.getElementById('searchPatients').checked;
+            const searchAlerts = document.getElementById('searchAlerts').checked;
+            const searchTasks = document.getElementById('searchTasks').checked;
+            const searchTimeline = document.getElementById('searchTimeline').checked;
+            const dateFrom = document.getElementById('dateFrom').value;
+            const dateTo = document.getElementById('dateTo').value;
+
+            if (!searchTerm) {
+                alert('Por favor ingrese un término de búsqueda');
+                return;
+            }
+
+            let results = [];
+
+            // Search in patients
+            if (searchPatients) {
+                searchData.patients.forEach(patient => {
+                    if (patient.name.toLowerCase().includes(searchTerm) || 
+                        patient.id.toLowerCase().includes(searchTerm) ||
+                        patient.status.toLowerCase().includes(searchTerm)) {
+                        results.push({
+                            type: 'Paciente',
+                            title: patient.name,
+                            subtitle: `ID: ${patient.id} - ${patient.status}`,
+                            icon: '👤'
+                        });
+                    }
+                });
+            }
+
+            // Search in alerts
+            if (searchAlerts) {
+                searchData.alerts.forEach(alert => {
+                    if (alert.title.toLowerCase().includes(searchTerm) ||
+                        alert.type.toLowerCase().includes(searchTerm)) {
+                        if (!dateFrom || !dateTo || (alert.date >= dateFrom && alert.date <= dateTo)) {
+                            results.push({
+                                type: 'Alerta',
+                                title: alert.title,
+                                subtitle: `${alert.type} - ${alert.patient}`,
+                                icon: '⚠️'
+                            });
+                        }
+                    }
+                });
+            }
+
+            // Search in tasks
+            if (searchTasks) {
+                searchData.tasks.forEach(task => {
+                    if (task.title.toLowerCase().includes(searchTerm) ||
+                        task.assignee.toLowerCase().includes(searchTerm)) {
+                        results.push({
+                            type: 'Tarea',
+                            title: task.title,
+                            subtitle: `${task.priority} - ${task.assignee}`,
+                            icon: '✅'
+                        });
+                    }
+                });
+            }
+
+            // Search in timeline
+            if (searchTimeline) {
+                searchData.timeline.forEach(event => {
+                    if (event.title.toLowerCase().includes(searchTerm) ||
+                        event.source.toLowerCase().includes(searchTerm)) {
+                        if (!dateFrom || !dateTo || (event.date >= dateFrom && event.date <= dateTo)) {
+                            results.push({
+                                type: 'Timeline',
+                                title: event.title,
+                                subtitle: `${event.source} - ${event.date}`,
+                                icon: '📅'
+                            });
+                        }
+                    }
+                });
+            }
+
+            displaySearchResults(results);
+        }
+
+        function displaySearchResults(results) {
+            const resultsContainer = document.getElementById('searchResultsList');
+            const searchResults = document.getElementById('searchResults');
+
+            if (results.length === 0) {
+                resultsContainer.innerHTML = '<p class="text-gray-500 text-sm">No se encontraron resultados</p>';
+            } else {
+                resultsContainer.innerHTML = results.map(result => `
+                    <div class="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded cursor-pointer">
+                        <span class="text-lg">${result.icon}</span>
+                        <div class="flex-1">
+                            <p class="text-sm font-medium text-gray-900">${result.title}</p>
+                            <p class="text-xs text-gray-500">${result.type} - ${result.subtitle}</p>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            searchResults.classList.remove('hidden');
+        }
+
+        // Settings functionality
+        function loadSettings() {
+            const savedSettings = LocalStorage.load('settings');
+            if (savedSettings) {
+                settings = { ...settings, ...savedSettings };
+            }
+
+            document.getElementById('themeSelector').value = settings.theme;
+            document.getElementById('refreshRate').value = settings.refreshRate;
+            document.getElementById('enableNotifications').checked = settings.enableNotifications;
+            document.getElementById('enableSounds').checked = settings.enableSounds;
+            document.getElementById('autoSave').checked = settings.autoSave;
+        }
+
+        function saveSettings() {
+            settings.theme = document.getElementById('themeSelector').value;
+            settings.refreshRate = parseInt(document.getElementById('refreshRate').value);
+            settings.enableNotifications = document.getElementById('enableNotifications').checked;
+            settings.enableSounds = document.getElementById('enableSounds').checked;
+            settings.autoSave = document.getElementById('autoSave').checked;
+
+            LocalStorage.save('settings', settings);
+            applySettings();
+            closeSettingsModal();
+            
+            // Show notification
+            showNotification('Configuraciones guardadas exitosamente', 'success');
+        }
+
+        function applySettings() {
+            // Apply theme
+            if (settings.theme === 'dark') {
+                document.body.classList.add('dark');
+            } else {
+                document.body.classList.remove('dark');
+            }
+
+            // Update refresh interval
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+            refreshInterval = setInterval(updateRealTimeData, settings.refreshRate * 1000);
+
+            console.log('Settings applied:', settings);
+        }
+
+        // Export functionality
+        function exportReport() {
+            const reportType = document.getElementById('reportType').value;
+            const exportFormat = document.getElementById('exportFormat').value;
+            const dateFrom = document.getElementById('exportDateFrom').value;
+            const dateTo = document.getElementById('exportDateTo').value;
+
+            // Generate report data based on type
+            let reportData = generateReportData(reportType, dateFrom, dateTo);
+            
+            // Export based on format
+            switch (exportFormat) {
+                case 'json':
+                    downloadJSON(reportData, `aura_report_${reportType}_${new Date().toISOString().split('T')[0]}.json`);
+                    break;
+                case 'csv':
+                    downloadCSV(reportData, `aura_report_${reportType}_${new Date().toISOString().split('T')[0]}.csv`);
+                    break;
+                case 'pdf':
+                    generatePDF(reportData, reportType);
+                    break;
+                case 'xlsx':
+                    generateExcel(reportData, reportType);
+                    break;
+            }
+
+            closeExportModal();
+            showNotification(`Reporte ${reportType} exportado en formato ${exportFormat.toUpperCase()}`, 'success');
+        }
+
+        function generateReportData(type, dateFrom, dateTo) {
+            const baseData = {
+                patient: {
+                    name: 'María González',
+                    id: 'MPI-12345',
+                    age: 45,
+                    status: 'Estable'
+                },
+                exportDate: new Date().toISOString(),
+                dateRange: { from: dateFrom, to: dateTo }
+            };
+
+            switch (type) {
+                case 'complete':
+                    return {
+                        ...baseData,
+                        vitals: {
+                            heartRate: '71 bpm',
+                            activity: '8,450 steps',
+                            glucose: '93 mg/dL',
+                            nextAppointment: '3 días'
+                        },
+                        alerts: searchData.alerts,
+                        tasks: searchData.tasks,
+                        timeline: searchData.timeline
+                    };
+                case 'vitals':
+                    return {
+                        ...baseData,
+                        vitals: {
+                            heartRate: '71 bpm',
+                            activity: '8,450 steps',
+                            glucose: '93 mg/dL',
+                            nextAppointment: '3 días'
+                        }
+                    };
+                case 'alerts':
+                    return { ...baseData, alerts: searchData.alerts };
+                case 'timeline':
+                    return { ...baseData, timeline: searchData.timeline };
+                case 'tasks':
+                    return { ...baseData, tasks: searchData.tasks };
+                default:
+                    return baseData;
+            }
+        }
+
+        function downloadJSON(data, filename) {
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function downloadCSV(data, filename) {
+            let csv = '';
+            
+            // Add patient info
+            csv += 'Información del Paciente\n';
+            csv += `Nombre,${data.patient.name}\n`;
+            csv += `ID,${data.patient.id}\n`;
+            csv += `Edad,${data.patient.age}\n`;
+            csv += `Estado,${data.patient.status}\n\n`;
+
+            // Add vitals if present
+            if (data.vitals) {
+                csv += 'Signos Vitales\n';
+                csv += `Frecuencia Cardíaca,${data.vitals.heartRate}\n`;
+                csv += `Actividad,${data.vitals.activity}\n`;
+                csv += `Glucosa,${data.vitals.glucose}\n`;
+                csv += `Próxima Cita,${data.vitals.nextAppointment}\n\n`;
+            }
+
+            // Add alerts if present
+            if (data.alerts) {
+                csv += 'Alertas\n';
+                csv += 'Tipo,Título,Paciente,Fecha\n';
+                data.alerts.forEach(alert => {
+                    csv += `${alert.type},${alert.title},${alert.patient},${alert.date}\n`;
+                });
+                csv += '\n';
+            }
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function generatePDF(data, type) {
+            // Simulate PDF generation
+            console.log('Generating PDF report:', type, data);
+            alert('Funcionalidad de PDF en desarrollo. En una aplicación real, se usaría una librería como jsPDF.');
+        }
+
+        function generateExcel(data, type) {
+            // Simulate Excel generation
+            console.log('Generating Excel report:', type, data);
+            alert('Funcionalidad de Excel en desarrollo. En una aplicación real, se usaría una librería como SheetJS.');
+        }
+
+        // Notification system
+        function showNotification(message, type = 'info') {
+            if (!settings.enableNotifications) return;
+
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 transition-all duration-300 ${
+                type === 'success' ? 'bg-green-500 text-white' :
+                type === 'error' ? 'bg-red-500 text-white' :
+                type === 'warning' ? 'bg-yellow-500 text-white' :
+                'bg-blue-500 text-white'
+            }`;
+            notification.textContent = message;
+
+            document.body.appendChild(notification);
+
+            // Auto remove after 3 seconds
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                notification.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        document.body.removeChild(notification);
+                    }
+                }, 300);
+            }, 3000);
+
+            // Play sound if enabled
+            if (settings.enableSounds && type === 'error') {
+                // In a real app, you would play an actual sound file
+                console.log('🔊 Alert sound would play here');
+            }
+        }
+
+        // Auto-save functionality
+        function autoSaveData() {
+            if (!settings.autoSave) return;
+
+            const currentData = {
+                currentSection: document.querySelector('.nav-item.active')?.dataset.section || 'dashboard',
+                lastUpdate: new Date().toISOString(),
+                patientData: {
+                    name: 'María González',
+                    id: 'MPI-12345',
+                    vitals: {
+                        heartRate: document.querySelector('.card-hover:first-child .text-2xl')?.textContent || '71 bpm',
+                        glucose: document.querySelector('.card-hover:nth-child(3) .text-2xl')?.textContent || '93 mg/dL'
+                    }
+                }
+            };
+
+            LocalStorage.save('currentSession', currentData);
+        }
+
+        // Sample data for charts
+        const chartData = {
+            'sleep-glucose': {
+                labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
+                datasets: [{
+                    label: 'Horas de Sueño',
+                    data: [7.5, 6.8, 7.2, 8.1, 7.0, 8.5, 7.8],
+                    borderColor: 'rgb(59, 130, 246)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    yAxisID: 'y'
+                }, {
+                    label: 'Glucosa (mg/dL)',
+                    data: [95, 102, 98, 88, 105, 85, 92],
+                    borderColor: 'rgb(239, 68, 68)',
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    yAxisID: 'y1'
+                }]
+            },
+            'activity-bp': {
+                labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
+                datasets: [{
+                    label: 'Pasos (miles)',
+                    data: [8.4, 6.2, 9.1, 7.8, 5.5, 10.2, 8.9],
+                    borderColor: 'rgb(34, 197, 94)',
+                    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                    yAxisID: 'y'
+                }, {
+                    label: 'Presión Sistólica',
+                    data: [125, 132, 118, 122, 138, 115, 120],
+                    borderColor: 'rgb(168, 85, 247)',
+                    backgroundColor: 'rgba(168, 85, 247, 0.1)',
+                    yAxisID: 'y1'
+                }]
+            },
+            'stress-hr': {
+                labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
+                datasets: [{
+                    label: 'Nivel de Estrés (1-10)',
+                    data: [3, 6, 4, 7, 8, 2, 3],
+                    borderColor: 'rgb(245, 158, 11)',
+                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                    yAxisID: 'y'
+                }, {
+                    label: 'FC Promedio',
+                    data: [68, 75, 70, 78, 82, 65, 69],
+                    borderColor: 'rgb(236, 72, 153)',
+                    backgroundColor: 'rgba(236, 72, 153, 0.1)',
+                    yAxisID: 'y1'
+                }]
+            }
+        };
+
+        // Section management
+        function showSection(sectionName) {
+            // Hide all sections
+            const sections = document.querySelectorAll('.section-content');
+            sections.forEach(section => {
+                section.classList.add('hidden');
+            });
+
+            // Show selected section
+            const targetSection = document.getElementById(sectionName + '-section');
+            if (targetSection) {
+                targetSection.classList.remove('hidden');
+            }
+
+            // Update navigation
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(item => {
+                item.classList.remove('active', 'bg-blue-100', 'text-blue-700');
+            });
+
+            const activeNav = document.querySelector(`[data-section="${sectionName}"]`);
+            if (activeNav) {
+                activeNav.classList.add('active', 'bg-blue-100', 'text-blue-700');
+            }
+
+            // Update header
+            updateSectionHeader(sectionName);
+
+            // Initialize section-specific functionality
+            if (sectionName === 'dashboard') {
+                initializeChart();
+            }
+        }
+
+        function updateSectionHeader(sectionName) {
+            const titles = {
+                'dashboard': {
+                    title: 'Dashboard Principal',
+                    subtitle: 'Resumen integral del paciente'
+                },
+                'timeline': {
+                    title: 'Línea de Tiempo',
+                    subtitle: 'Historial cronológico del paciente'
+                },
+                'datasources': {
+                    title: 'Fuentes de Datos',
+                    subtitle: 'Estado de las integraciones'
+                },
+                'tasks': {
+                    title: 'Tareas Clínicas',
+                    subtitle: 'Acciones pendientes y completadas'
+                },
+                'alerts': {
+                    title: 'Alertas Proactivas',
+                    subtitle: 'Notificaciones y recomendaciones del sistema'
+                }
+            };
+
+            const sectionInfo = titles[sectionName] || titles['dashboard'];
+            document.getElementById('sectionTitle').textContent = sectionInfo.title;
+            document.getElementById('sectionSubtitle').textContent = sectionInfo.subtitle;
+        }
+
+        // Chart initialization
+        function initializeChart() {
+            const ctx = document.getElementById('correlationChart');
+            if (!ctx) return;
+
+            if (correlationChart) {
+                correlationChart.destroy();
+            }
+
+            const selectedMetric = document.getElementById('metricSelector').value;
+            const data = chartData[selectedMetric];
+
+            correlationChart = new Chart(ctx, {
+                type: 'line',
+                data: data,
+                options: {
+                    responsive: true,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Días de la Semana'
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            grid: {
+                                drawOnChartArea: false,
+                            },
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize default section
+            showSection('dashboard');
+
+            // Metric selector change
+            const metricSelector = document.getElementById('metricSelector');
+            if (metricSelector) {
+                metricSelector.addEventListener('change', function() {
+                    initializeChart();
+                });
+            }
+
+            // Add click handlers for timeline events
+            const timelineEvents = document.querySelectorAll('#timeline-section .bg-blue-50, #timeline-section .bg-purple-50, #timeline-section .bg-green-50, #timeline-section .bg-red-50');
+            timelineEvents.forEach(event => {
+                event.addEventListener('click', function() {
+                    // Toggle expanded view
+                    const isExpanded = this.classList.contains('expanded');
+                    
+                    // Remove expanded class from all events
+                    timelineEvents.forEach(e => e.classList.remove('expanded'));
+                    
+                    if (!isExpanded) {
+                        this.classList.add('expanded');
+                        // Here you could add more detailed information
+                        console.log('Expanded timeline event:', this);
+                    }
+                });
+            });
+
+            // Add hover effects to vital signs cards
+            const vitalCards = document.querySelectorAll('.card-hover');
+            vitalCards.forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-4px)';
+                });
+                
+                card.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0)';
+                });
+            });
+
+            // Task checkbox handlers
+            const taskCheckboxes = document.querySelectorAll('#tasks-section input[type="checkbox"]');
+            taskCheckboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    const taskItem = this.closest('.flex');
+                    if (this.checked) {
+                        taskItem.classList.add('opacity-75');
+                        taskItem.querySelector('h5').classList.add('line-through');
+                    } else {
+                        taskItem.classList.remove('opacity-75');
+                        taskItem.querySelector('h5').classList.remove('line-through');
+                    }
+                });
+            });
+
+            // Simulate real-time updates
+            setInterval(updateRealTimeData, 30000); // Update every 30 seconds
+        });
+
+        // Simulate real-time data updates
+        function updateRealTimeData() {
+            // Update heart rate
+            const heartRateElement = document.querySelector('.card-hover:first-child .text-2xl');
+            if (heartRateElement) {
+                const currentRate = parseInt(heartRateElement.textContent);
+                const newRate = currentRate + Math.floor(Math.random() * 6) - 3; // ±3 bpm variation
+                heartRateElement.textContent = Math.max(60, Math.min(100, newRate)) + ' bpm';
+            }
+
+            // Update glucose
+            const glucoseElement = document.querySelector('.card-hover:nth-child(3) .text-2xl');
+            if (glucoseElement) {
+                const currentGlucose = parseInt(glucoseElement.textContent);
+                const newGlucose = currentGlucose + Math.floor(Math.random() * 10) - 5; // ±5 mg/dL variation
+                glucoseElement.textContent = Math.max(70, Math.min(140, newGlucose)) + ' mg/dL';
+            }
+
+            // Update last sync times
+            const syncElements = document.querySelectorAll('.text-xs.text-gray-500');
+            syncElements.forEach(element => {
+                if (element.textContent.includes('Hace')) {
+                    // Randomly update some sync times
+                    if (Math.random() < 0.3) {
+                        const minutes = Math.floor(Math.random() * 60) + 1;
+                        element.textContent = element.textContent.replace(/Hace \d+\w+/, `Hace ${minutes}min`);
+                    }
+                }
+            });
+
+            console.log('Real-time data updated');
+        }
+
+        // Utility functions
+        function formatTime(date) {
+            return date.toLocaleTimeString('es-ES', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+        }
+
+        function formatDate(date) {
+            return date.toLocaleDateString('es-ES', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+        }
+
+        // Export functionality (for future use)
+        function exportPatientData() {
+            const patientData = {
+                patient: {
+                    name: 'María González',
+                    id: 'MPI-12345',
+                    age: 45
+                },
+                vitals: {
+                    heartRate: '72 bpm',
+                    activity: '8,450 steps',
+                    glucose: '95 mg/dL'
+                },
+                lastUpdate: new Date().toISOString()
+            };
+            
+            console.log('Patient data export:', patientData);
+            // In a real application, this would trigger a download or API call
+        }
+
+        // Search functionality (for future implementation)
+        function searchPatientData(query) {
+            console.log('Searching for:', query);
+            // Implementation would search across all patient data
+        }
+
+        console.log('Aura Medical Intelligence Platform initialized successfully');
+    </script>
+</body>
+</html>
